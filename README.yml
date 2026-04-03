@@ -1,0 +1,167 @@
+module_name: Terraform Transit Gateway Networking Module
+module_description: The Terraform Wrapper for Transit Gateway simplifies the configuration of AWS Transit Gateway networking (TGW / VPC attachments / TGW route tables & static routes / RAM sharing / VPC routes to TGW / etc.).
+module_badges:
+  - url: "https://github.com/gocloudLa/terraform-aws-wrapper-tgw/releases/latest"
+    image: "https://img.shields.io/github/v/release/gocloudLa/terraform-aws-wrapper-tgw.svg?style=for-the-badge"
+    alt: "Latest Release"
+  - url: ""
+    image: "https://img.shields.io/github/last-commit/gocloudLa/terraform-aws-wrapper-tgw.svg?style=for-the-badge"
+    alt: "Last Commit"
+  - url: "https://registry.terraform.io/modules/gocloudLa/wrapper-tgw/aws"
+    image: "https://img.shields.io/badge/Terraform-Registry-7B42BC?style=for-the-badge&logo=terraform&logoColor=white"
+    alt: "Terraform Registry"
+quick_start: |
+  ```hcl
+  module "wrapper_tgw" {
+    source = "path/to/terraform-aws-wrapper-tgw"
+
+    metadata      = local.metadata
+    vpc_parameter = {
+      vpcs         = module.wrapper_vpc.vpcs
+      subnets      = module.wrapper_vpc.subnets
+      route_tables = module.wrapper_vpc.route_tables
+    }
+
+    tgw_parameters = {
+      "tgw-01" = {
+        share_tgw                             = true
+        ram_principals                        = ["123456789"]
+        enable_auto_accept_shared_attachments = true
+
+        vpc_attachments = {
+          "prod" = {
+            subnet_ids                                      = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
+            dns_support                                     = true
+            ipv6_support                                    = false
+            transit_gateway_default_route_table_association = true
+            transit_gateway_default_route_table_propagation = true
+            tgw_routes = [
+              { destination_cidr_block = "10.15.0.0/16" },
+              { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
+            ]
+          }
+          "dev" = {
+            subnet_ids   = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
+            dns_support  = true
+            ipv6_support = false
+            tgw_routes = [
+              { destination_cidr_block = "10.16.0.0/16" },
+              { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
+            ]
+          }
+        }
+
+        vpc_routes = {
+          "prod" = {
+            "private" = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
+            "public"  = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
+          }
+          "dev" = {
+            "private" = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
+            "public"  = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
+          }
+        }
+      }
+    }
+  }
+  ```
+features:
+  - icon: 📡
+    title: RAM sharing and auto-accept
+    short_description: Share the Transit Gateway with other accounts and accept attachments automatically
+    long_description: |
+      Same pattern as `examples/complete/main.tf`: `share_tgw`, `ram_principals`, and `enable_auto_accept_shared_attachments`. Use real account IDs, Organization ARNs, or OU ARNs instead of placeholders.
+    examples:
+      - title: RAM (as in examples/complete)
+        code: |
+          ```hcl
+          share_tgw                             = true
+          ram_principals                        = ["123456789"]
+          enable_auto_accept_shared_attachments = true
+          ```
+  - icon: 🔀
+    title: Multi-VPC attachments and TGW routes
+    short_description: One subnet per AZ, DNS/IPv6 toggles, and TGW static routes (including blackholes)
+    long_description: |
+      Map keys (`prod`, `dev`, …) must match VPC keys from the VPC wrapper. `subnet_ids` use the same logical names as subnet keys (e.g. `private-us-east-1a`). `tgw_routes` programs the upstream module’s TGW route table (VPC CIDR route plus optional `blackhole` for 0.0.0.0/0), per [variables.tf](https://raw.githubusercontent.com/terraform-aws-modules/terraform-aws-transit-gateway/refs/heads/master/variables.tf).
+    examples:
+      - title: Two attachments with tgw_routes (from examples/complete)
+        code: |
+          ```hcl
+          vpc_attachments = {
+            "prod" = {
+              subnet_ids = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
+              dns_support                                     = true
+              ipv6_support                                    = false
+              transit_gateway_default_route_table_association = true
+              transit_gateway_default_route_table_propagation = true
+              tgw_routes = [
+                { destination_cidr_block = "10.15.0.0/16" },
+                { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
+              ]
+            }
+            "dev" = {
+              subnet_ids   = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
+              dns_support  = true
+              ipv6_support = false
+              tgw_routes = [
+                { destination_cidr_block = "10.16.0.0/16" },
+                { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
+              ]
+            }
+          }
+          ```
+  - icon: 🛤️
+    title: vpc_routes (wrapper extension)
+    short_description: Symmetric `aws_route` entries from each VPC toward remote CIDRs via the TGW
+    long_description: |
+      Top-level `vpc_routes` matches `examples/complete`: for each VPC key and route table name, list IPv4 CIDRs that should point at the Transit Gateway. Route table keys must exist in `vpc_parameter.route_tables` as `{vpc_key}-{route_table_name}`.
+    examples:
+      - title: Private and public route tables (from examples/complete)
+        code: |
+          ```hcl
+          vpc_routes = {
+            "prod" = {
+              "private" = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
+              "public"  = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
+            }
+            "dev" = {
+              "private" = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
+              "public"  = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
+            }
+          }
+          ```
+  - icon: ⚙️
+    title: Optional TGW settings (commented in examples/complete)
+    short_description: Uncomment to tune creation, ASN, features, and RAM extras
+    long_description: |
+      The complete example documents optional keys as comments (`create_tgw`, `create_tgw_routes`, `description`, `amazon_side_asn`, default association/propagation, multicast, VPN ECMP, DNS, `transit_gateway_cidr_blocks`, `transit_gateway_route_table_id`, `ram_allow_external_principals`, `ram_name`). Enable them when needed; semantics match the upstream transit-gateway module.
+    examples: []
+
+important_notes: |
+  - **Upstream reference**: Field names and semantics for the Transit Gateway resource align with [terraform-aws-modules/terraform-aws-transit-gateway `variables.tf` on `master`](https://raw.githubusercontent.com/terraform-aws-modules/terraform-aws-transit-gateway/refs/heads/master/variables.tf). This wrapper pins a specific module version; if upstream adds variables (e.g. `region`, `timeouts`, `enable_sg_referencing_support`, `tgw_tags`), they are only available once passed through in `main.tf`.
+  - **Subnet and route table keys**: `vpc_parameter.subnets` keys must be `{vpc_key}-{subnet_group}-{az_key}` (same as the VPC wrapper). `vpc_parameter.route_tables` keys must be `{vpc_key}-{route_table_name}`.
+  - **Existing Transit Gateway**: When `create_tgw = false`, the wrapper uses a data source filtered by `options.amazon-side-asn` (default `64512` in this repo unless overridden); use a unique ASN or adjust the data source if multiple gateways share the default ASN.
+  - **Full example**: See `examples/complete` for a richer `tgw_parameters` map.
+
+input_table: |
+  | `create_tgw` | Controls if TGW should be created (affects almost all resources). | `bool` | `true` |
+  | `name` | Name used as identifier on resources. | `string` | `"${local.common_name}-${each.key}"` |
+  | `description` | Description of the EC2 Transit Gateway. | `string` | `null` |
+  | `amazon_side_asn` | ASN for the Amazon side of the gateway. | `string` | `"64512"` |
+  | `enable_default_route_table_association` | Attachments automatically associated with the default association route table. | `bool` | `true` |
+  | `enable_default_route_table_propagation` | Attachments propagate routes to the default propagation route table. | `bool` | `true` |
+  | `enable_auto_accept_shared_attachments` | Auto-accept attachment requests. | `bool` | `false` |
+  | `enable_vpn_ecmp_support` | VPN ECMP support. | `bool` | `true` |
+  | `enable_multicast_support` | Multicast support. | `bool` | `false` |
+  | `enable_dns_support` | DNS support on the TGW. | `bool` | `true` |
+  | `transit_gateway_cidr_blocks` | IPv4/IPv6 CIDR blocks for the TGW (/24+ IPv4, /64+ IPv6). | `list(string)` | `[]` |
+  | `create_tgw_routes` | Create TGW route table / static routes (e.g. from `tgw_routes` on attachments). | `bool` | `true` |
+  | `transit_gateway_route_table_id` | Existing TGW route table ID when reusing a gateway / custom table. | `string` | `null` |
+  | `share_tgw` | Share the TGW via RAM. | `bool` | `false` |
+  | `ram_name` | RAM resource share name. | `string` | `"${local.common_name}-${each.key}"` |
+  | `ram_allow_external_principals` | Allow principals outside the organization. | `bool` | `false` |
+  | `ram_principals` | Accounts / Org ARNs / OU ARNs to share with. | `list(string)` | `[]` |
+  | `ram_resource_share_arn` | Existing RAM share ARN (e.g. accepter flows). | `string` | `""` |
+  | `tags` | Tags merged onto all resources (upstream `tags`). | `map(string)` | `local.common_tags` |
+  | `vpc_attachments` | Map of VPC attachments (see `examples/complete/main.tf`). Type `any` upstream. | `any` | `{}` |
