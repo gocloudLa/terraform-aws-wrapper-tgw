@@ -12,58 +12,49 @@ module_badges:
     alt: "Terraform Registry"
 quick_start: |
   ```hcl
-  module "wrapper_tgw" {
-    source = "path/to/terraform-aws-wrapper-tgw"
+  tgw_parameters = {
+    "tgw-01" = {
+      share_tgw                             = true
+      ram_principals                        = ["123456789"]
+      enable_auto_accept_shared_attachments = true
 
-    metadata      = local.metadata
-    vpc_parameter = {
-      vpcs         = module.wrapper_vpc.vpcs
-      subnets      = module.wrapper_vpc.subnets
-      route_tables = module.wrapper_vpc.route_tables
-    }
-
-    tgw_parameters = {
-      "tgw-01" = {
-        share_tgw                             = true
-        ram_principals                        = ["123456789"]
-        enable_auto_accept_shared_attachments = true
-
-        vpc_attachments = {
-          "prod" = {
-            subnet_ids                                      = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
-            dns_support                                     = true
-            ipv6_support                                    = false
-            transit_gateway_default_route_table_association = true
-            transit_gateway_default_route_table_propagation = true
-            tgw_routes = [
-              { destination_cidr_block = "10.15.0.0/16" },
-              { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
-            ]
-          }
-          "dev" = {
-            subnet_ids   = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
-            dns_support  = true
-            ipv6_support = false
-            tgw_routes = [
-              { destination_cidr_block = "10.16.0.0/16" },
-              { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
-            ]
-          }
+      vpc_attachments = {
+        "prod" = {
+          subnet_ids                                      = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
+          dns_support                                     = true
+          ipv6_support                                    = false
+          transit_gateway_default_route_table_association = true
+          transit_gateway_default_route_table_propagation = true
+          tgw_routes = [
+            { destination_cidr_block = "10.15.0.0/16" },
+            { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
+          ]
         }
+        "dev" = {
+          subnet_ids   = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"]
+          dns_support  = true
+          ipv6_support = false
+          tgw_routes = [
+            { destination_cidr_block = "10.16.0.0/16" },
+            { blackhole = true, destination_cidr_block = "0.0.0.0/0" },
+          ]
+        }
+      }
 
-        vpc_routes = {
-          "prod" = {
-            "private" = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
-            "public"  = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
-          }
-          "dev" = {
-            "private" = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
-            "public"  = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
-          }
+      vpc_routes = {
+        "prod" = {
+          "private" = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
+          "public"  = { destination_cidr_block = ["10.16.0.0/16", "10.17.0.0/16"] }
+        }
+        "dev" = {
+          "private" = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
+          "public"  = { destination_cidr_block = ["10.15.0.0/16", "10.17.0.0/16"] }
         }
       }
     }
   }
+
+  tgw_defaults = var.tgw_defaults
   ```
 features:
   - icon: 📡
@@ -143,25 +134,27 @@ important_notes: |
   - **Subnet and route table keys**: `vpc_parameter.subnets` keys must be `{vpc_key}-{subnet_group}-{az_key}` (same as the VPC wrapper). `vpc_parameter.route_tables` keys must be `{vpc_key}-{route_table_name}`.
   - **Existing Transit Gateway**: When `create_tgw = false`, the wrapper uses a data source filtered by `options.amazon-side-asn` (default `64512` in this repo unless overridden); use a unique ASN or adjust the data source if multiple gateways share the default ASN.
   - **Full example**: See `examples/complete` for a richer `tgw_parameters` map.
+  - **RAM and AWS Organizations**: To share the Transit Gateway with organization accounts without invitations, turn on **Resource Access Manager → Settings → Enable sharing with AWS Organizations** in the **organization’s management account**. The organization must have **all features** enabled.
 
 input_table: |
-  | `create_tgw` | Controls if TGW should be created (affects almost all resources). | `bool` | `true` |
-  | `name` | Name used as identifier on resources. | `string` | `"${local.common_name}-${each.key}"` |
-  | `description` | Description of the EC2 Transit Gateway. | `string` | `null` |
-  | `amazon_side_asn` | ASN for the Amazon side of the gateway. | `string` | `"64512"` |
-  | `enable_default_route_table_association` | Attachments automatically associated with the default association route table. | `bool` | `true` |
-  | `enable_default_route_table_propagation` | Attachments propagate routes to the default propagation route table. | `bool` | `true` |
-  | `enable_auto_accept_shared_attachments` | Auto-accept attachment requests. | `bool` | `false` |
-  | `enable_vpn_ecmp_support` | VPN ECMP support. | `bool` | `true` |
-  | `enable_multicast_support` | Multicast support. | `bool` | `false` |
-  | `enable_dns_support` | DNS support on the TGW. | `bool` | `true` |
-  | `transit_gateway_cidr_blocks` | IPv4/IPv6 CIDR blocks for the TGW (/24+ IPv4, /64+ IPv6). | `list(string)` | `[]` |
-  | `create_tgw_routes` | Create TGW route table / static routes (e.g. from `tgw_routes` on attachments). | `bool` | `true` |
-  | `transit_gateway_route_table_id` | Existing TGW route table ID when reusing a gateway / custom table. | `string` | `null` |
-  | `share_tgw` | Share the TGW via RAM. | `bool` | `false` |
-  | `ram_name` | RAM resource share name. | `string` | `"${local.common_name}-${each.key}"` |
-  | `ram_allow_external_principals` | Allow principals outside the organization. | `bool` | `false` |
-  | `ram_principals` | Accounts / Org ARNs / OU ARNs to share with. | `list(string)` | `[]` |
-  | `ram_resource_share_arn` | Existing RAM share ARN (e.g. accepter flows). | `string` | `""` |
-  | `tags` | Tags merged onto all resources (upstream `tags`). | `map(string)` | `local.common_tags` |
-  | `vpc_attachments` | Map of VPC attachments (see `examples/complete/main.tf`). Type `any` upstream. | `any` | `{}` |
+  | create_tgw | Whether to create the Transit Gateway. | `bool` | `true` | no |
+  | name | Resource name identifier. | `string` | `"${local.common_name}-${each.key}"` | no |
+  | description | Transit Gateway description. | `string` | `null` | no |
+  | amazon_side_asn | Amazon-side ASN. | `string` | `64512` | no |
+  | enable_default_route_table_association | Auto-associate attachments with default association route table. | `bool` | `true` | no |
+  | enable_default_route_table_propagation | Auto-propagate routes to default propagation route table. | `bool` | `true` | no |
+  | enable_auto_accept_shared_attachments | Auto-accept shared attachment requests. | `bool` | `false` | no |
+  | enable_vpn_ecmp_support | VPN ECMP support. | `bool` | `true` | no |
+  | enable_multicast_support | Multicast support. | `bool` | `false` | no |
+  | enable_dns_support | DNS support on the TGW. | `bool` | `true` | no |
+  | transit_gateway_cidr_blocks | TGW CIDR blocks (IPv4 /24+ or IPv6 /64+). | `list(string)` | `[]` | no |
+  | create_tgw_routes | Create TGW route table and routes (e.g. from attachment `tgw_routes`). | `bool` | `true` | no |
+  | transit_gateway_route_table_id | Existing route table ID when reusing a TGW. | `string` | `null` | no |
+  | share_tgw | Share the TGW through RAM. | `bool` | `false` | no |
+  | ram_name | RAM resource share name. | `string` | `"${local.common_name}-${each.key}"` | no |
+  | ram_allow_external_principals | Allow principals outside the organization. | `bool` | `false` | no |
+  | ram_principals | Account IDs, Organization ARNs, or OU ARNs. | `list(string)` | `[]` | no |
+  | ram_resource_share_arn | Existing RAM share ARN. | `string` | `""` | no |
+  | tags | Tags for all resources (upstream `tags`). | `map(string)` | `local.common_tags` | no |
+  | vpc_attachments | Map of VPC attachments (`any` upstream); wrapper resolves `vpc_id` and `subnet_ids` from `vpc_parameter`. | `any` | `{}` | no |
+  | vpc_routes | **Wrapper-only:** `vpc_routes.<vpc>.<route_table>.destination_cidr_block` → `aws_route` to TGW. | `any` | `{}` | no |
