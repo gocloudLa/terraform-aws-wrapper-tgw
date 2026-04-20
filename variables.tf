@@ -8,7 +8,7 @@ variable "metadata" {
 
 variable "vpc_parameter" {
   type        = any
-  description = "vpc parameteres to configure tgw module"
+  description = "VPC wrapper outputs used to resolve vpc_id, subnet_ids, and route table IDs."
   default     = {}
 }
 
@@ -17,12 +17,12 @@ variable "vpc_parameter" {
 /*----------------------------------------------------------------------*/
 variable "tgw_parameters" {
   type        = any
-  description = "tgw parameteres to configure tgw module"
+  description = "Map of Transit Gateway instances and their attachment and routing configuration."
   default     = {}
 }
 
 variable "tgw_defaults" {
   type        = any
-  description = "tgw defaults parameteres to configure tgw module"
+  description = "Default values merged into each entry of tgw_parameters."
   default     = {}
 }

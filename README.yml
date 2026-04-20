@@ -1,4 +1,4 @@
-module_name: Terraform Transit Gateway Networking Module
+module_name: "Terraform Transit Gateway Module"
 module_description: The Terraform Wrapper for Transit Gateway simplifies the configuration of AWS Transit Gateway networking (TGW / VPC attachments / TGW route tables & static routes / RAM sharing / VPC routes to TGW / etc.).
 module_badges:
   - url: "https://github.com/gocloudLa/terraform-aws-wrapper-tgw/releases/latest"
@@ -53,8 +53,6 @@ quick_start: |
       }
     }
   }
-
-  tgw_defaults = var.tgw_defaults
   ```
 features:
   - icon: 📡
