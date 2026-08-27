@@ -23,7 +23,7 @@ The Terraform Wrapper for Transit Gateway simplifies the configuration of AWS Tr
 ### 🔗 External Modules
 | Name | Version |
 |------|------:|
-| <a href="https://github.com/terraform-aws-modules/terraform-aws-transit-gateway" target="_blank">terraform-aws-modules/transit-gateway/aws</a> | 2.12.1 |
+| <a href="https://github.com/terraform-aws-modules/terraform-aws-transit-gateway" target="_blank">terraform-aws-modules/transit-gateway/aws</a> | 3.3.1 |
 
 
 

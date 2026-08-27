@@ -29,7 +29,7 @@ locals {
 
 module "wrapper_tgw" {
   source  = "terraform-aws-modules/transit-gateway/aws"
-  version = "2.12.1"
+  version = "3.3.1"
 
   for_each = local.create_tgw
 
