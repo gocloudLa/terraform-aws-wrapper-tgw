@@ -29,7 +29,39 @@ module "wrapper_tgw" {
       ram_principals = ["123456789"]
       # ram_allow_external_principals = false
       # ram_name                      = null
-      enable_auto_accept_shared_attachments = true
+      enable_auto_accept_shared_attachments  = true
+      enable_default_route_table_association = false
+      enable_default_route_table_propagation = false
+
+      ## Named TGW route tables (wrapper extension). RAM-shared so other accounts
+      ## can associate their attachments. Discover VPN/remote VPCs by Name tag.
+      attachments = {
+        vpn-01 = {
+          resource_type = "vpn"
+          name          = "example-vpn-01"
+          associate     = "hybrid"
+        }
+        spoke = {
+          name = "example-spoke-tgw-01-vpc-01"
+        }
+      }
+
+      route_tables = {
+        shared = {
+          propagations = ["spoke", "vpn-01"]
+        }
+        hybrid = {
+          propagations = ["prod"]
+        }
+        spoke = {
+          # create = false
+          # ram_share_name = "hub-tgw-rt-spoke" # spoke accounts look this up
+          propagations = ["vpn-01", "prod"]
+          static_routes = [
+            { destination_cidr_block = "0.0.0.0/0", attachment = "prod" },
+          ]
+        }
+      }
 
       ## Managing TGW VPC Attachments
       vpc_attachments = {
@@ -37,8 +69,9 @@ module "wrapper_tgw" {
           subnet_ids                                      = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"] // Only 1 Subnet per AZ
           dns_support                                     = true
           ipv6_support                                    = false
-          transit_gateway_default_route_table_association = true
-          transit_gateway_default_route_table_propagation = true
+          transit_gateway_default_route_table_association = false
+          transit_gateway_default_route_table_propagation = false
+          transit_gateway_route_table                     = "shared"
           tgw_routes = [
             {
               destination_cidr_block = "10.15.0.0/16"

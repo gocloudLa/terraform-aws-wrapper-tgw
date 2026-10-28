@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+* Named TGW route tables (`route_tables`), RAM share per table, attachment discovery (`attachments`), and per-attachment association (`transit_gateway_route_table`)
+
 ## 0.1.0 (2026-06-29)
 
 

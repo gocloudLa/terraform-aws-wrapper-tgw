@@ -15,8 +15,8 @@ locals {
               dns_support                                     = lookup(vpc_attachments_values, "dns_support", true)
               ipv6_support                                    = lookup(vpc_attachments_values, "ipv6_support", false)
               security_group_referencing_support              = lookup(vpc_attachments_values, "security_group_referencing_support", null)
-              transit_gateway_default_route_table_association = lookup(vpc_attachments_values, "transit_gateway_default_route_table_association", true)
-              transit_gateway_default_route_table_propagation = lookup(vpc_attachments_values, "transit_gateway_default_route_table_propagation", true)
+              transit_gateway_default_route_table_association = lookup(vpc_attachments_values, "transit_gateway_default_route_table_association", try(vpc_attachments_values.transit_gateway_route_table, null) == null)
+              transit_gateway_default_route_table_propagation = lookup(vpc_attachments_values, "transit_gateway_default_route_table_propagation", try(vpc_attachments_values.transit_gateway_route_table, null) == null)
               tags                                            = merge(lookup(vpc_attachments_values, "tags", local.common_tags), { Name = "${local.common_name}-${tgw_key}-${vpc_attachments_key}" })
             }
           }
@@ -33,15 +33,16 @@ module "wrapper_tgw" {
 
   for_each = local.create_tgw
 
-  create_tgw        = lookup(each.value, "create_tgw", true)
-  create_tgw_routes = lookup(each.value, "create_tgw_routes", true)
+  create_tgw = lookup(each.value, "create_tgw", true)
+  # Named route_tables replace the upstream single extra table.
+  create_tgw_routes = lookup(each.value, "create_tgw_routes", length(try(each.value.route_tables, {})) == 0)
   share_tgw         = lookup(each.value, "share_tgw", false)
 
   name                                   = lookup(each.value, "name", "${local.common_name}-${each.key}")
   description                            = lookup(each.value, "description", null)
   amazon_side_asn                        = lookup(each.value, "amazon_side_asn", "64512")
-  enable_default_route_table_association = lookup(each.value, "enable_default_route_table_association", true)
-  enable_default_route_table_propagation = lookup(each.value, "enable_default_route_table_propagation", true)
+  enable_default_route_table_association = lookup(each.value, "enable_default_route_table_association", length(try(each.value.route_tables, {})) == 0)
+  enable_default_route_table_propagation = lookup(each.value, "enable_default_route_table_propagation", length(try(each.value.route_tables, {})) == 0)
   enable_auto_accept_shared_attachments  = lookup(each.value, "enable_auto_accept_shared_attachments", false)
   enable_multicast_support               = lookup(each.value, "enable_multicast_support", false)
   enable_vpn_ecmp_support                = lookup(each.value, "enable_vpn_ecmp_support", true)
