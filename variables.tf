@@ -19,6 +19,7 @@ variable "tgw_parameters" {
   type        = any
   description = <<-EOT
     Map of Transit Gateway instances. Besides upstream keys, supports:
+    - region: AWS region (default metadata.aws_region, then the provider region)
     - route_tables: named TGW route tables (propagations, static_routes, create/share/ram_share_name)
     - attachments: extra attachments discovered by Name (or pinned by id) for association/propagation
     - vpc_attachments.*.transit_gateway_route_table: named table key to associate at attachment creation

@@ -109,6 +109,7 @@ locals {
 resource "aws_ec2_transit_gateway_route_table" "this" {
   for_each = local.route_tables_create
 
+  region             = local.tgw_region[each.value.tgw_key]
   transit_gateway_id = local.tgw_ids[each.value.tgw_key]
 
   tags = merge(local.common_tags, each.value.tags, {
@@ -119,6 +120,7 @@ resource "aws_ec2_transit_gateway_route_table" "this" {
 resource "aws_ec2_transit_gateway_route_table_association" "this" {
   for_each = local.associations
 
+  region                         = local.tgw_region[split("/", each.value.route_table)[0]]
   transit_gateway_attachment_id  = local.attachment_ids[each.value.attachment]
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
   replace_existing_association   = true
@@ -127,6 +129,7 @@ resource "aws_ec2_transit_gateway_route_table_association" "this" {
 resource "aws_ec2_transit_gateway_route_table_propagation" "this" {
   for_each = local.propagations
 
+  region                         = local.tgw_region[split("/", each.value.route_table)[0]]
   transit_gateway_attachment_id  = local.attachment_ids[each.value.attachment]
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
 }
@@ -134,6 +137,7 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "this" {
 resource "aws_ec2_transit_gateway_route" "this" {
   for_each = local.static_routes
 
+  region                         = local.tgw_region[split("/", each.value.route_table)[0]]
   destination_cidr_block         = each.value.destination_cidr_block
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
   transit_gateway_attachment_id  = each.value.blackhole ? null : local.attachment_ids[each.value.attachment]

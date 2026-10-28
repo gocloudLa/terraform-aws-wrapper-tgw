@@ -14,7 +14,7 @@ locals {
               appliance_mode_support                          = lookup(vpc_attachments_values, "appliance_mode_support", false)
               dns_support                                     = lookup(vpc_attachments_values, "dns_support", true)
               ipv6_support                                    = lookup(vpc_attachments_values, "ipv6_support", false)
-              security_group_referencing_support              = lookup(vpc_attachments_values, "security_group_referencing_support", null)
+              security_group_referencing_support              = lookup(vpc_attachments_values, "security_group_referencing_support", false)
               transit_gateway_default_route_table_association = lookup(vpc_attachments_values, "transit_gateway_default_route_table_association", try(vpc_attachments_values.transit_gateway_route_table, null) == null)
               transit_gateway_default_route_table_propagation = lookup(vpc_attachments_values, "transit_gateway_default_route_table_propagation", try(vpc_attachments_values.transit_gateway_route_table, null) == null)
               tags                                            = merge(lookup(vpc_attachments_values, "tags", local.common_tags), { Name = "${local.common_name}-${tgw_key}-${vpc_attachments_key}" })
@@ -29,9 +29,11 @@ locals {
 
 module "wrapper_tgw" {
   source  = "terraform-aws-modules/transit-gateway/aws"
-  version = "2.12.1"
+  version = "3.3.1"
 
   for_each = local.create_tgw
+
+  region = local.tgw_region[each.key]
 
   create_tgw = lookup(each.value, "create_tgw", true)
   # Named route_tables replace the upstream single extra table.
@@ -47,6 +49,8 @@ module "wrapper_tgw" {
   enable_multicast_support               = lookup(each.value, "enable_multicast_support", false)
   enable_vpn_ecmp_support                = lookup(each.value, "enable_vpn_ecmp_support", true)
   enable_dns_support                     = lookup(each.value, "enable_dns_support", true)
+  enable_sg_referencing_support          = lookup(each.value, "enable_sg_referencing_support", true)
+  enable_encryption_support              = lookup(each.value, "enable_encryption_support", false)
 
   ram_allow_external_principals = lookup(each.value, "ram_allow_external_principals", false)
   ram_name                      = lookup(each.value, "ram_name", "${local.common_name}-${each.key}")
@@ -70,6 +74,7 @@ locals {
           for key in try(vpc_route_table_values.destination_cidr_block, vpc_route_table_values.destination_ipv6_cidr_block, []) :
           {
             "${vpc_name}-${vpc_route_table_name}-${key}" = {
+              region                      = local.tgw_region[tgw_key]
               route_table_id              = var.vpc_parameter.route_tables["${vpc_name}-${vpc_route_table_name}"].id
               destination_cidr_block      = key
               destination_ipv6_cidr_block = null // to be supported with IPv6
@@ -86,6 +91,7 @@ locals {
 resource "aws_route" "transit_gateway" {
   for_each = local.create_routes
 
+  region         = each.value.region
   route_table_id = each.value.route_table_id
 
   destination_cidr_block      = each.value.destination_cidr_block

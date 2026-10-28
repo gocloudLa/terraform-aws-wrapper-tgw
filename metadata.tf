@@ -1,6 +1,9 @@
 locals {
   metadata = var.metadata
 
+  # Per-TGW override, then tgw_defaults, then metadata.aws_region, then the provider region.
+  region = try(local.metadata.aws_region, data.aws_region.current.region)
+
   common_name_prefix = try(local.metadata.common_name, local.default_common_name)
   common_name        = try(local.metadata.common_name, local.default_common_name)
   common_tags        = try(local.metadata.common_tags, local.default_common_tags)

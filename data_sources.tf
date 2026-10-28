@@ -1,8 +1,12 @@
+data "aws_region" "current" {}
+
 /*----------------------------------------------------------------------*/
 /* Network | datasources                                                */
 /*----------------------------------------------------------------------*/
 data "aws_ec2_transit_gateway" "this" {
   for_each = { for k, v in var.tgw_parameters : k => v if(try(v.create_tgw, true) != true) }
+
+  region = local.tgw_region[each.key]
 
   filter {
     name = "options.amazon-side-asn"
@@ -15,6 +19,8 @@ data "aws_ec2_transit_gateway" "this" {
 
 data "aws_ec2_transit_gateway_attachment" "discovered" {
   for_each = local.attachments_to_lookup
+
+  region = local.tgw_region[each.value.tgw_key]
 
   filter {
     name   = "transit-gateway-id"
@@ -35,6 +41,7 @@ data "aws_ec2_transit_gateway_attachment" "discovered" {
 data "aws_ram_resource_share" "route_table" {
   for_each = local.route_tables_lookup
 
+  region                = local.tgw_region[each.value.tgw_key]
   name                  = each.value.ram_share_name
   resource_owner        = "OTHER-ACCOUNTS"
   resource_share_status = "ACTIVE"
