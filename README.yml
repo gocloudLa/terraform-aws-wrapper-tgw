@@ -186,7 +186,7 @@ input_table: |
   | enable_vpn_ecmp_support | VPN ECMP support. | `bool` | `true` | no |
   | enable_multicast_support | Multicast support. | `bool` | `false` | no |
   | enable_dns_support | DNS support on the TGW. | `bool` | `true` | no |
-  | enable_sg_referencing_support | Security group referencing on the TGW. | `bool` | `false` | no |
+  | enable_sg_referencing_support | Security group referencing on the TGW. | `bool` | `true` | no |
   | enable_encryption_support | Encryption support on the TGW. | `bool` | `false` | no |
   | region | AWS region for the TGW and wrapper-owned resources. | `string` | `metadata.aws_region` then provider | no |
   | transit_gateway_cidr_blocks | TGW CIDR blocks (IPv4 /24+ or IPv6 /64+). | `list(string)` | `[]` | no |

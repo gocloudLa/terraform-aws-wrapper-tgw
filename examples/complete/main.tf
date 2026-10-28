@@ -19,7 +19,7 @@ module "wrapper_tgw" {
       # enable_multicast_support               = false
       # enable_vpn_ecmp_support                = true
       # enable_dns_support                     = true
-      # enable_sg_referencing_support          = false
+      # enable_sg_referencing_support          = true
       # enable_encryption_support              = false
       # region                                 = "us-east-2" # Default: metadata.aws_region, then the provider region
 

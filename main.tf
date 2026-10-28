@@ -49,7 +49,7 @@ module "wrapper_tgw" {
   enable_multicast_support               = lookup(each.value, "enable_multicast_support", false)
   enable_vpn_ecmp_support                = lookup(each.value, "enable_vpn_ecmp_support", true)
   enable_dns_support                     = lookup(each.value, "enable_dns_support", true)
-  enable_sg_referencing_support          = lookup(each.value, "enable_sg_referencing_support", false)
+  enable_sg_referencing_support          = lookup(each.value, "enable_sg_referencing_support", true)
   enable_encryption_support              = lookup(each.value, "enable_encryption_support", false)
 
   ram_allow_external_principals = lookup(each.value, "ram_allow_external_principals", false)
