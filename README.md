@@ -14,7 +14,7 @@ The Terraform Wrapper for Transit Gateway simplifies the configuration of AWS Tr
 
 - 🔀 [Multi-VPC attachments and TGW routes](#multi-vpc-attachments-and-tgw-routes) - One subnet per AZ, DNS/IPv6 toggles, and TGW static routes (including blackholes)
 
-- 🗺️ [Named TGW route tables](#named-tgw-route-tables) - Multiple route tables, RAM share, data-source attachments, per-attachment association
+- 🗺️ [Named TGW route tables](#named-tgw-route-tables) - Multiple route tables, data-source attachments, per-attachment association
 
 - 🛤️ [vpc_routes (wrapper extension)](#vpc_routes-(wrapper-extension)) - Symmetric `aws_route` entries from each VPC toward remote CIDRs via the TGW
 
