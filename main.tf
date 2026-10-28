@@ -98,4 +98,7 @@ resource "aws_route" "transit_gateway" {
   destination_ipv6_cidr_block = each.value.destination_ipv6_cidr_block
 
   transit_gateway_id = each.value.transit_gateway_id
+
+  # CreateRoute returns InvalidTransitGatewayID.NotFound until the VPC attachment exists.
+  depends_on = [module.wrapper_tgw]
 }

@@ -4,8 +4,12 @@
 
 ### Features
 
-* Named TGW route tables (`route_tables`), RAM share per table, attachment discovery (`attachments`), and per-attachment association (`transit_gateway_route_table`)
+* Named TGW route tables (`route_tables`), attachment discovery (`attachments`), and per-attachment association (`transit_gateway_route_table`)
 * Bump nested `terraform-aws-modules/transit-gateway/aws` to 3.3.1; pass `region` from `tgw_parameters` / `tgw_defaults` / `metadata.aws_region` / the AWS provider. `enable_sg_referencing_support` defaults on for the TGW and for VPC attachments (attachment can still override). `enable_encryption_support` defaults off.
+
+### Bug Fixes
+
+* Drop RAM sharing of TGW route tables. AWS RAM does not support `ec2:TransitGatewayRouteTable`; only the Transit Gateway itself is shareable.
 
 ## 0.1.0 (2026-06-29)
 

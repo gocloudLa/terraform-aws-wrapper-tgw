@@ -36,8 +36,7 @@ module "wrapper_tgw" {
       enable_default_route_table_association = false
       enable_default_route_table_propagation = false
 
-      ## Named TGW route tables (wrapper extension). RAM-shared so other accounts
-      ## can associate their attachments. Discover VPN/remote VPCs by Name tag.
+      ## Named TGW route tables (wrapper extension). Discover VPN/remote VPCs by Name tag.
       attachments = {
         vpn-01 = {
           resource_type = "vpn"
@@ -57,8 +56,6 @@ module "wrapper_tgw" {
           propagations = ["prod"]
         }
         spoke = {
-          # create = false
-          # ram_share_name = "hub-tgw-rt-spoke" # spoke accounts look this up
           propagations = ["vpn-01", "prod"]
           static_routes = [
             { destination_cidr_block = "0.0.0.0/0", attachment = "prod" },

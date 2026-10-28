@@ -129,7 +129,7 @@ vpc_attachments = {
 
 
 ### Named TGW route tables
-`route_tables` creates named TGW route tables (`${common_name}-tgw-rt-<key>`). Set `vpc_attachments.<vpc>.transit_gateway_route_table` to choose the table when the attachment is created (that also defaults default-RT association/propagation to false for the attachment). Extra attachments (VPN, remote VPCs) are discovered with `attachments` (Name tag or `id`) and can `associate` plus appear in `propagations` / `static_routes`. Each table is RAM-shared (`share_route_tables`, `ram_principals`) so spoke accounts can look it up by share name (`create = false`, `ram_share_name`). When `route_tables` is set, default TGW association/propagation and the upstream extra table are off unless you override them.
+`route_tables` creates named TGW route tables (`${common_name}-tgw-rt-<key>`). Set `vpc_attachments.<vpc>.transit_gateway_route_table` to choose the table when the attachment is created (that also defaults default-RT association/propagation to false for the attachment). Extra attachments (VPN, remote VPCs) are discovered with `attachments` (Name tag or `id`) and can `associate` plus appear in `propagations` / `static_routes`. AWS RAM cannot share TGW route tables; associations stay in the TGW owner account. When `route_tables` is set, default TGW association/propagation and the upstream extra table are off unless you override them.
 
 
 <details><summary>Named tables and attachment association</summary>
@@ -156,8 +156,6 @@ route_tables = {
   shared = { propagations = ["gel", "vpn-01"] }
   hybrid = { propagations = ["vpc-01"] }
   spoke-gel = {
-    # create = false
-    # ram_share_name = "jus-net-tgw-rt-spoke-gel"
     propagations = ["vpn-01", "vpc-01"]
     static_routes = [
       { destination_cidr_block = "0.0.0.0/0", attachment = "vpc-01" },
@@ -228,9 +226,8 @@ The complete example documents optional keys as comments (`create_tgw`, `create_
 | tags                                   | Tags for all resources (upstream `tags`).                                                                                                                                                     | `map(string)`  | `local.common_tags`                  | no       |
 | vpc_attachments                        | Map of VPC attachments (`any` upstream); wrapper resolves `vpc_id` and `subnet_ids` from `vpc_parameter`. Set `transit_gateway_route_table` to a `route_tables` key to associate at creation. | `any`          | `{}`                                 | no       |
 | vpc_routes                             | **Wrapper-only:** `vpc_routes.<vpc>.<route_table>.destination_cidr_block` → `aws_route` to TGW.                                                                                               | `any`          | `{}`                                 | no       |
-| route_tables                           | **Wrapper-only:** named TGW route tables (`propagations`, `static_routes`, `create`, `share`, `ram_share_name`).                                                                              | `any`          | `{}`                                 | no       |
+| route_tables                           | **Wrapper-only:** named TGW route tables (`propagations`, `static_routes`, `name`).                                                                                                           | `any`          | `{}`                                 | no       |
 | attachments                            | **Wrapper-only:** extra attachments by Name/`id` for association and propagation.                                                                                                             | `any`          | `{}`                                 | no       |
-| share_route_tables                     | **Wrapper-only:** RAM-share created named tables with `ram_principals`.                                                                                                                       | `bool`         | `true` when `ram_principals` is set  | no       |
 
 
 

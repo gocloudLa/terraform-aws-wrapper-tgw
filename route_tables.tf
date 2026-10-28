@@ -9,22 +9,18 @@ locals {
     for tgw_key, tgw_config in var.tgw_parameters : {
       for rt_key, rt in try(tgw_config.route_tables, {}) :
       "${tgw_key}/${rt_key}" => {
-        tgw_key                       = tgw_key
-        rt_key                        = rt_key
-        create                        = try(rt.create, lookup(tgw_config, "create_tgw", true))
-        share                         = try(rt.share, try(tgw_config.share_route_tables, length(try(tgw_config.ram_principals, [])) > 0))
-        ram_share_name                = try(rt.ram_share_name, "${local.common_name}-tgw-rt-${rt_key}")
-        ram_principals                = try(rt.ram_principals, try(tgw_config.ram_principals, []))
-        ram_allow_external_principals = try(rt.ram_allow_external_principals, try(tgw_config.ram_allow_external_principals, false))
-        tags                          = try(rt.tags, {})
-        propagations                  = try(rt.propagations, [])
-        static_routes                 = try(rt.static_routes, [])
+        tgw_key       = tgw_key
+        rt_key        = rt_key
+        create        = try(rt.create, lookup(tgw_config, "create_tgw", true))
+        name          = try(rt.name, "${local.common_name}-tgw-rt-${rt_key}")
+        tags          = try(rt.tags, {})
+        propagations  = try(rt.propagations, [])
+        static_routes = try(rt.static_routes, [])
       }
     }
   ]...)
 
   route_tables_create = { for k, v in local.route_tables : k => v if v.create }
-  route_tables_lookup = { for k, v in local.route_tables : k => v if !v.create }
 
   discovered_attachments = merge([
     for tgw_key, tgw_config in var.tgw_parameters : {
@@ -100,10 +96,9 @@ locals {
     }
   ]...)
 
-  route_table_ids = merge(
-    { for k, v in aws_ec2_transit_gateway_route_table.this : k => v.id },
-    { for k, v in local.route_tables_lookup : k => reverse(split("/", one(data.aws_ram_resource_share.route_table[k].resource_arns)))[0] }
-  )
+  route_table_ids = {
+    for k, v in aws_ec2_transit_gateway_route_table.this : k => v.id
+  }
 }
 
 resource "aws_ec2_transit_gateway_route_table" "this" {
@@ -113,7 +108,7 @@ resource "aws_ec2_transit_gateway_route_table" "this" {
   transit_gateway_id = local.tgw_ids[each.value.tgw_key]
 
   tags = merge(local.common_tags, each.value.tags, {
-    Name = each.value.ram_share_name
+    Name = each.value.name
   })
 }
 

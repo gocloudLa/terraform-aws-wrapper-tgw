@@ -7,7 +7,7 @@ output "route_table_ids" {
   value = {
     for tgw_key, tgw_config in var.tgw_parameters : tgw_key => {
       for rt_key, rt in try(tgw_config.route_tables, {}) :
-      rt_key => local.route_table_ids["${tgw_key}/${rt_key}"]
+      rt_key => try(local.route_table_ids["${tgw_key}/${rt_key}"], null)
     }
   }
 }
@@ -22,12 +22,3 @@ output "route_table_arns" {
   }
 }
 
-output "ram_resource_share_arns" {
-  description = "RAM share ARN per named TGW route table."
-  value = {
-    for tgw_key, tgw_config in var.tgw_parameters : tgw_key => {
-      for rt_key, rt in try(tgw_config.route_tables, {}) :
-      rt_key => try(aws_ram_resource_share.route_table["${tgw_key}/${rt_key}"].arn, null)
-    }
-  }
-}

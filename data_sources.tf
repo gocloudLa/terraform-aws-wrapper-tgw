@@ -37,12 +37,3 @@ data "aws_ec2_transit_gateway_attachment" "discovered" {
     values = [each.value.name]
   }
 }
-
-data "aws_ram_resource_share" "route_table" {
-  for_each = local.route_tables_lookup
-
-  region                = local.tgw_region[each.value.tgw_key]
-  name                  = each.value.ram_share_name
-  resource_owner        = "OTHER-ACCOUNTS"
-  resource_share_status = "ACTIVE"
-}
