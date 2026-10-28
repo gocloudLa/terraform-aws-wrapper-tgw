@@ -195,7 +195,7 @@ vpc_routes = {
 
 
 ### Optional TGW settings (commented in examples/complete)
-The complete example documents optional keys as comments (`create_tgw`, `create_tgw_routes`, `description`, `amazon_side_asn`, default association/propagation, multicast, VPN ECMP, DNS, `transit_gateway_cidr_blocks`, `transit_gateway_route_table_id`, `ram_allow_external_principals`, `ram_name`). Enable them when needed; semantics match the upstream transit-gateway module.
+The complete example documents optional keys as comments (`create_tgw`, `create_tgw_routes`, `description`, `amazon_side_asn`, default association/propagation, multicast, VPN ECMP, DNS, SG referencing, encryption, `region`, `transit_gateway_cidr_blocks`, `transit_gateway_route_table_id`, `ram_allow_external_principals`, `ram_name`). Enable them when needed; semantics match the upstream transit-gateway module.
 
 
 
@@ -214,6 +214,9 @@ The complete example documents optional keys as comments (`create_tgw`, `create_
 | enable_vpn_ecmp_support                | VPN ECMP support.                                                                                                                                                                             | `bool`         | `true`                               | no       |
 | enable_multicast_support               | Multicast support.                                                                                                                                                                            | `bool`         | `false`                              | no       |
 | enable_dns_support                     | DNS support on the TGW.                                                                                                                                                                       | `bool`         | `true`                               | no       |
+| enable_sg_referencing_support          | Security group referencing on the TGW.                                                                                                                                                        | `bool`         | `true`                               | no       |
+| enable_encryption_support              | Encryption support on the TGW.                                                                                                                                                                | `bool`         | `false`                              | no       |
+| region                                 | AWS region for the TGW and wrapper-owned resources.                                                                                                                                           | `string`       | `metadata.aws_region` then provider  | no       |
 | transit_gateway_cidr_blocks            | TGW CIDR blocks (IPv4 /24+ or IPv6 /64+).                                                                                                                                                     | `list(string)` | `[]`                                 | no       |
 | create_tgw_routes                      | Create TGW route table and routes (e.g. from attachment `tgw_routes`).                                                                                                                        | `bool`         | `true`                               | no       |
 | transit_gateway_route_table_id         | Existing route table ID when reusing a TGW.                                                                                                                                                   | `string`       | `null`                               | no       |
@@ -236,7 +239,8 @@ The complete example documents optional keys as comments (`create_tgw`, `create_
 
 
 ## ⚠️ Important Notes
-- **Upstream reference**: Field names and semantics for the Transit Gateway resource align with [terraform-aws-modules/terraform-aws-transit-gateway `variables.tf` on `master`](https://raw.githubusercontent.com/terraform-aws-modules/terraform-aws-transit-gateway/refs/heads/master/variables.tf). This wrapper pins a specific module version; if upstream adds variables (e.g. `region`, `timeouts`, `enable_sg_referencing_support`, `tgw_tags`), they are only available once passed through in `main.tf`.
+- **Upstream reference**: Nested module is `terraform-aws-modules/transit-gateway/aws` `3.3.1`. Field names align with that version’s `variables.tf`.
+- **Region**: `region` on a TGW entry or `tgw_defaults.region` overrides `metadata.aws_region`, then the AWS provider region (`data.aws_region.current`). Same pattern as other GoCloud wrappers.
 - **Subnet and route table keys**: `vpc_parameter.subnets` keys must be `{vpc_key}-{subnet_group}-{az_key}` (same as the VPC wrapper). `vpc_parameter.route_tables` keys must be `{vpc_key}-{route_table_name}`.
 - **Existing Transit Gateway**: When `create_tgw = false`, the wrapper uses a data source filtered by `options.amazon-side-asn` (default `64512` in this repo unless overridden); use a unique ASN or adjust the data source if multiple gateways share the default ASN.
 - **Full example**: See `examples/complete` for a richer `tgw_parameters` map.
