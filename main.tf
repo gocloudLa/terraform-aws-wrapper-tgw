@@ -14,7 +14,7 @@ locals {
               appliance_mode_support                          = lookup(vpc_attachments_values, "appliance_mode_support", false)
               dns_support                                     = lookup(vpc_attachments_values, "dns_support", true)
               ipv6_support                                    = lookup(vpc_attachments_values, "ipv6_support", false)
-              security_group_referencing_support              = lookup(vpc_attachments_values, "security_group_referencing_support", false)
+              security_group_referencing_support              = lookup(vpc_attachments_values, "security_group_referencing_support", lookup(tgw_config, "enable_sg_referencing_support", true))
               transit_gateway_default_route_table_association = lookup(vpc_attachments_values, "transit_gateway_default_route_table_association", try(vpc_attachments_values.transit_gateway_route_table, null) == null)
               transit_gateway_default_route_table_propagation = lookup(vpc_attachments_values, "transit_gateway_default_route_table_propagation", try(vpc_attachments_values.transit_gateway_route_table, null) == null)
               tags                                            = merge(lookup(vpc_attachments_values, "tags", local.common_tags), { Name = "${local.common_name}-${tgw_key}-${vpc_attachments_key}" })
