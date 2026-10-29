@@ -10,7 +10,7 @@ module "wrapper_tgw" {
       # Variables to deploy transit gateway resource
 
       # create_tgw = true
-      # create_tgw_routes = false
+      # create_tgw_routes = false # extra nested table + tgw_routes; forced off when route_tables is set
 
       # description                            = "Transit Gateway 01"
       # amazon_side_asn                        = "64512"

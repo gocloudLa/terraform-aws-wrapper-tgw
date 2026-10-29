@@ -94,7 +94,7 @@ enable_auto_accept_shared_attachments = true
 
 
 ### Multi-VPC attachments and TGW routes
-Map keys (`prod`, `dev`, …) must match VPC keys from the VPC wrapper. `subnet_ids` use the same logical names as subnet keys (e.g. `private-us-east-1a`). `tgw_routes` programs the upstream module’s TGW route table (VPC CIDR route plus optional `blackhole` for 0.0.0.0/0), per [variables.tf](https://raw.githubusercontent.com/terraform-aws-modules/terraform-aws-transit-gateway/refs/heads/master/variables.tf).
+Map keys (`prod`, `dev`, …) must match VPC keys from the VPC wrapper. `subnet_ids` use the same logical names as subnet keys (e.g. `private-us-east-1a`). `tgw_routes` programs the **upstream extra** TGW route table (VPC CIDR route plus optional `blackhole` for 0.0.0.0/0), only when `create_tgw_routes = true` and `route_tables` is empty. With named `route_tables`, use `route_tables.<key>.static_routes` instead. See [variables.tf](https://raw.githubusercontent.com/terraform-aws-modules/terraform-aws-transit-gateway/refs/heads/master/variables.tf).
 
 
 <details><summary>Two attachments with tgw_routes (from examples/complete)</summary>
@@ -128,8 +128,35 @@ vpc_attachments = {
 </details>
 
 
+### Default vs extra vs named TGW route tables
+A Transit Gateway always has **AWS default** association and propagation tables. Those exist as soon as the TGW is created. `enable_default_route_table_association` / `enable_default_route_table_propagation` only enable or disable auto-use of those defaults for new attachments. They do not create the tables.
+
+`create_tgw_routes` is the nested `terraform-aws-modules/transit-gateway` flag. It does **not** create the AWS default tables. When `true` it creates **one extra** table (tagged like the TGW, for example `jus-net-tgw-01`) and:
+
+1. Writes each VPC attachment’s `tgw_routes` (including `blackhole`) into that extra table.
+2. Associates an attachment to the extra table only if `transit_gateway_default_route_table_association = false`.
+3. Propagates an attachment into the extra table only if `transit_gateway_default_route_table_propagation = false`.
+
+Attachments that keep those flags `true` stay on the **AWS default** tables. The extra table is unused for them.
+
+`route_tables` is the wrapper alternative: one named table per key (`${common_name}-tgw-rt-<key>`). Association, propagation, and static routes (including blackholes) are declared on those tables. When `route_tables` is set, the wrapper forces `create_tgw_routes = false` so the extra table cannot fight `transit_gateway_route_table`. Do not set `create_tgw_routes = true` together with `route_tables`.
+
 ### Named TGW route tables
-`route_tables` creates named TGW route tables (`${common_name}-tgw-rt-<key>`). Set `vpc_attachments.<vpc>.transit_gateway_route_table` to choose the table when the attachment is created (that also defaults default-RT association/propagation to false for the attachment). Extra attachments (VPN, remote VPCs) are discovered with `attachments` (Name tag or `id`) and can `associate` plus appear in `propagations` / `static_routes`. AWS RAM cannot share TGW route tables; associations stay in the TGW owner account. When `route_tables` is set, default TGW association/propagation and the upstream extra table are off unless you override them.
+`route_tables` creates named TGW route tables (`${common_name}-tgw-rt-<key>`).
+
+**Associate (which table an attachment uses to send traffic)**
+- Local VPC: `vpc_attachments.<vpc>.transit_gateway_route_table = "<key>"`. That also defaults that attachment’s default-RT association/propagation to false.
+- VPN or a VPC in another account: `attachments.<name>.associate = "<key>"`. Discover with `name` (Name tag, only if the attachment was created in this account), `owner_id` (spoke account ID; required for cross-account VPCs because their tags are not visible to the TGW owner), `resource_id` (VPC ID), or `id` (`tgw-attach-…`).
+- `replace_existing_association = true`, so an attachment already on the default table can move.
+
+**Propagate (which prefixes a table learns)**
+- `route_tables.<key>.propagations = ["vpc-01", "gel", "vpn-01"]`. Keys must exist in `vpc_attachments` or `attachments`. Propagation does not move the attachment; it only advertises that attachment’s CIDRs into the named table.
+
+**Static routes and blackholes**
+- `route_tables.<key>.static_routes = [{ destination_cidr_block = "0.0.0.0/0", attachment = "egress-vpc" }, { destination_cidr_block = "10.81.64.0/18", blackhole = true }]`.
+- These write to the **named** table, not the extra nested table and not `vpc_attachments.*.tgw_routes`.
+
+AWS RAM cannot share TGW route tables; associations stay in the TGW owner account. Spoke stacks should not look up named table IDs.
 
 
 <details><summary>Named tables and attachment association</summary>
@@ -193,7 +220,7 @@ vpc_routes = {
 
 
 ### Optional TGW settings (commented in examples/complete)
-The complete example documents optional keys as comments (`create_tgw`, `create_tgw_routes`, `description`, `amazon_side_asn`, default association/propagation, multicast, VPN ECMP, DNS, SG referencing, encryption, `region`, `transit_gateway_cidr_blocks`, `transit_gateway_route_table_id`, `ram_allow_external_principals`, `ram_name`). Enable them when needed; semantics match the upstream transit-gateway module.
+The complete example documents optional keys as comments (`create_tgw`, `create_tgw_routes`, `description`, `amazon_side_asn`, default association/propagation, multicast, VPN ECMP, DNS, SG referencing, encryption, `region`, `transit_gateway_cidr_blocks`, `transit_gateway_route_table_id`, `ram_allow_external_principals`, `ram_name`). `create_tgw_routes` is the nested extra table, not the AWS default tables; it is forced off when `route_tables` is set.
 
 
 
@@ -216,7 +243,7 @@ The complete example documents optional keys as comments (`create_tgw`, `create_
 | enable_encryption_support              | Encryption support on the TGW.                                                                                                                                                                | `bool`         | `false`                              | no       |
 | region                                 | AWS region for the TGW and wrapper-owned resources.                                                                                                                                           | `string`       | `metadata.aws_region` then provider  | no       |
 | transit_gateway_cidr_blocks            | TGW CIDR blocks (IPv4 /24+ or IPv6 /64+).                                                                                                                                                     | `list(string)` | `[]`                                 | no       |
-| create_tgw_routes                      | Create TGW route table and routes (e.g. from attachment `tgw_routes`).                                                                                                                        | `bool`         | `true`                               | no       |
+| create_tgw_routes                      | Nested extra TGW route table plus `tgw_routes`. Does not create the AWS default tables. Forced `false` when `route_tables` is set.                                                            | `bool`         | `true` unless `route_tables` is set  | no       |
 | transit_gateway_route_table_id         | Existing route table ID when reusing a TGW.                                                                                                                                                   | `string`       | `null`                               | no       |
 | share_tgw                              | Share the TGW through RAM.                                                                                                                                                                    | `bool`         | `false`                              | no       |
 | ram_name                               | RAM resource share name.                                                                                                                                                                      | `string`       | `"${local.common_name}-${each.key}"` | no       |
@@ -226,8 +253,8 @@ The complete example documents optional keys as comments (`create_tgw`, `create_
 | tags                                   | Tags for all resources (upstream `tags`).                                                                                                                                                     | `map(string)`  | `local.common_tags`                  | no       |
 | vpc_attachments                        | Map of VPC attachments (`any` upstream); wrapper resolves `vpc_id` and `subnet_ids` from `vpc_parameter`. Set `transit_gateway_route_table` to a `route_tables` key to associate at creation. | `any`          | `{}`                                 | no       |
 | vpc_routes                             | **Wrapper-only:** `vpc_routes.<vpc>.<route_table>.destination_cidr_block` → `aws_route` to TGW.                                                                                               | `any`          | `{}`                                 | no       |
-| route_tables                           | **Wrapper-only:** named TGW route tables (`propagations`, `static_routes`, `name`).                                                                                                           | `any`          | `{}`                                 | no       |
-| attachments                            | **Wrapper-only:** extra attachments by Name/`id` for association and propagation.                                                                                                             | `any`          | `{}`                                 | no       |
+| route_tables                           | **Wrapper-only:** named TGW tables. `propagations` (attachment keys), `static_routes` (`destination_cidr_block`, `attachment` or `blackhole`), optional `name`.                               | `any`          | `{}`                                 | no       |
+| attachments                            | **Wrapper-only:** discover extra attachments (`name`, `owner_id`, `resource_id`, `id`) for `associate` / `propagations` / `static_routes`.                                                    | `any`          | `{}`                                 | no       |
 
 
 
@@ -242,6 +269,7 @@ The complete example documents optional keys as comments (`create_tgw`, `create_
 - **Existing Transit Gateway**: When `create_tgw = false`, the wrapper uses a data source filtered by `options.amazon-side-asn` (default `64512` in this repo unless overridden); use a unique ASN or adjust the data source if multiple gateways share the default ASN.
 - **Full example**: See `examples/complete` for a richer `tgw_parameters` map.
 - **RAM and AWS Organizations**: To share the Transit Gateway with organization accounts without invitations, turn on **Resource Access Manager → Settings → Enable sharing with AWS Organizations** in the **organization’s management account**. The organization must have **all features** enabled.
+- **Route tables**: AWS default tables come with the TGW. `create_tgw_routes` adds one extra nested table and only associates/propagates attachments that set default assoc/prop to `false`; `tgw_routes` land on that extra table. Named `route_tables` are the isolation model (`associate` / `propagations` / `static_routes`). Do not combine `create_tgw_routes = true` with `route_tables`.
 
 
 
