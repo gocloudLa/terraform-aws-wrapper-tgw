@@ -36,8 +36,10 @@ module "wrapper_tgw" {
   region = local.tgw_region[each.key]
 
   create_tgw = lookup(each.value, "create_tgw", true)
-  # Named route_tables replace the upstream single extra table.
-  create_tgw_routes = lookup(each.value, "create_tgw_routes", length(try(each.value.route_tables, {})) == 0)
+  # Named route_tables replace the upstream extra table. Leaving create_tgw_routes
+  # on associates the attachment to that extra/default table and fights
+  # transit_gateway_route_table (replace_existing_association).
+  create_tgw_routes = length(try(each.value.route_tables, {})) > 0 ? false : lookup(each.value, "create_tgw_routes", true)
   share_tgw         = lookup(each.value, "share_tgw", false)
 
   name                                   = lookup(each.value, "name", "${local.common_name}-${each.key}")
