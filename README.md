@@ -14,6 +14,8 @@ The Terraform Wrapper for Transit Gateway simplifies the configuration of AWS Tr
 
 - 🔀 [Multi-VPC attachments and TGW routes](#multi-vpc-attachments-and-tgw-routes) - One subnet per AZ, DNS/IPv6 toggles, and TGW static routes (including blackholes)
 
+- 🧭 [Default vs extra vs named TGW route tables](#default-vs-extra-vs-named-tgw-route-tables) - Which table attachments associate to, where they propagate, and where static routes are created
+
 - 🗺️ [Named TGW route tables](#named-tgw-route-tables) - Multiple route tables, data-source attachments, per-attachment association
 
 - 🛤️ [vpc_routes (wrapper extension)](#vpc_routes-(wrapper-extension)) - Symmetric `aws_route` entries from each VPC toward remote CIDRs via the TGW
@@ -140,6 +142,8 @@ A Transit Gateway always has **AWS default** association and propagation tables.
 Attachments that keep those flags `true` stay on the **AWS default** tables. The extra table is unused for them.
 
 `route_tables` is the wrapper alternative: one named table per key (`${common_name}-tgw-rt-<key>`). Association, propagation, and static routes (including blackholes) are declared on those tables. When `route_tables` is set, the wrapper forces `create_tgw_routes = false` so the extra table cannot fight `transit_gateway_route_table`. Do not set `create_tgw_routes = true` together with `route_tables`.
+
+
 
 ### Named TGW route tables
 `route_tables` creates named TGW route tables (`${common_name}-tgw-rt-<key>`).
