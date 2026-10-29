@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 
+* `attachments` discovery accepts `owner_id` (`resource-owner-id`) and `resource_id`; `name` is optional. Cross-account VPC attachment tags are not visible to the TGW owner, so Name-tag lookups failed for spoke VPCs.
 * Drop RAM sharing of TGW route tables. AWS RAM does not support `ec2:TransitGatewayRouteTable`; only the Transit Gateway itself is shareable.
 
 ## 0.1.0 (2026-06-29)

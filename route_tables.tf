@@ -30,6 +30,8 @@ locals {
         att_key       = att_key
         resource_type = try(att.resource_type, "vpc")
         name          = try(att.name, null)
+        owner_id      = try(att.owner_id, null)
+        resource_id   = try(att.resource_id, null)
         id            = try(att.id, null)
         associate     = try(att.associate, null)
       }

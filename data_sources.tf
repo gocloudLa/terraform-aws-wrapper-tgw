@@ -33,7 +33,34 @@ data "aws_ec2_transit_gateway_attachment" "discovered" {
   }
 
   filter {
-    name   = "tag:Name"
-    values = [each.value.name]
+    name   = "state"
+    values = ["available"]
+  }
+
+  # Tags on a cross-account attachment belong to the account that created it and are
+  # not visible to the TGW owner. Use owner_id (resource-owner-id) or resource_id for
+  # spoke VPCs; use name only for attachments created in the TGW owner account (VPN, local VPC).
+  dynamic "filter" {
+    for_each = each.value.name != null ? [each.value.name] : []
+    content {
+      name   = "tag:Name"
+      values = [filter.value]
+    }
+  }
+
+  dynamic "filter" {
+    for_each = each.value.owner_id != null ? [each.value.owner_id] : []
+    content {
+      name   = "resource-owner-id"
+      values = [filter.value]
+    }
+  }
+
+  dynamic "filter" {
+    for_each = each.value.resource_id != null ? [each.value.resource_id] : []
+    content {
+      name   = "resource-id"
+      values = [filter.value]
+    }
   }
 }
