@@ -151,6 +151,7 @@ Attachments that keep those flags `true` stay on the **AWS default** tables. The
 **Associate (which table an attachment uses to send traffic)**
 - Local VPC: `vpc_attachments.<vpc>.transit_gateway_route_table = "<key>"`. That also defaults that attachment’s default-RT association/propagation to false.
 - VPN or a VPC in another account: `attachments.<name>.associate = "<key>"`. Discover with `name` (Name tag, only if the attachment was created in this account), `owner_id` (spoke account ID; required for cross-account VPCs because their tags are not visible to the TGW owner), `resource_id` (VPC ID), or `id` (`tgw-attach-…`).
+- Destroy order: destroy spoke stacks first, then the TGW owner stack. A discovered attachment that no longer exists does not block `destroy`; a normal plan fails with "TGW attachment … not found" until it is removed from `attachments` and `route_tables`.
 - VPN created by the VPN wrapper in the same stack: associate it from `vpn_parameters` (`transit_gateway_route_table`, `transit_gateway_propagations`, `transit_gateway_static_route_tables`) instead of `attachments`. An `attachments` lookup fails on the first apply because the VPN attachment does not exist yet.
 - `replace_existing_association = true`, so an attachment already on the default table can move.
 
