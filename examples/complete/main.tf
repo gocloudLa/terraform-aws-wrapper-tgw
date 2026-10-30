@@ -10,7 +10,7 @@ module "wrapper_tgw" {
       # Variables to deploy transit gateway resource
 
       # create_tgw = true
-      # create_tgw_routes = false # extra nested table + tgw_routes; forced off when route_tables is set
+      create_tgw_routes = false # Default: true. Must be false with route_tables (nested extra table + tgw_routes)
 
       # description                            = "Transit Gateway 01"
       # amazon_side_asn                        = "64512"
@@ -19,7 +19,7 @@ module "wrapper_tgw" {
       # enable_multicast_support               = false
       # enable_vpn_ecmp_support                = true
       # enable_dns_support                     = true
-      # enable_sg_referencing_support          = true
+      # enable_sg_referencing_support          = false
       # enable_encryption_support              = false
       # region                                 = "us-east-2" # Default: metadata.aws_region, then the provider region
 
@@ -50,7 +50,7 @@ module "wrapper_tgw" {
 
       route_tables = {
         shared = {
-          propagations = ["spoke", "vpn-01"]
+          propagations = ["spoke", "vpn-01", "dev"]
         }
         hybrid = {
           propagations = ["prod"]
@@ -72,33 +72,12 @@ module "wrapper_tgw" {
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
           transit_gateway_route_table                     = "shared"
-          tgw_routes = [
-            {
-              destination_cidr_block = "10.15.0.0/16"
-
-            },
-            {
-              blackhole              = true
-              destination_cidr_block = "0.0.0.0/0"
-            }
-          ]
         }
         "dev" = {
           dns_support                                     = true
           ipv6_support                                    = false
           subnet_ids                                      = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"] // Only 1 Subnet per AZ
-          transit_gateway_default_route_table_association = true
-          transit_gateway_default_route_table_propagation = true
-          tgw_routes = [
-            {
-              destination_cidr_block = "10.16.0.0/16"
-
-            },
-            {
-              blackhole              = true
-              destination_cidr_block = "0.0.0.0/0"
-            }
-          ]
+          transit_gateway_route_table                     = "spoke" # Default assoc/prop then default to false
         }
       }
       ## Managing route association of route tables of attached VPC's

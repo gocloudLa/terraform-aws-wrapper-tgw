@@ -1,17 +1,12 @@
 locals {
-  tgw_ids = {
-    for tgw_key, tgw_config in var.tgw_parameters : tgw_key => (
-      lookup(tgw_config, "create_tgw", true) ? module.wrapper_tgw[tgw_key].ec2_transit_gateway_id : data.aws_ec2_transit_gateway.this[tgw_key].id
-    )
-  }
-
   route_tables = merge([
-    for tgw_key, tgw_config in var.tgw_parameters : {
-      for rt_key, rt in try(tgw_config.route_tables, {}) :
+    for tgw_key, tgw in local.tgws : {
+      for rt_key, rt in try(tgw.route_tables, {}) :
       "${tgw_key}/${rt_key}" => {
         tgw_key       = tgw_key
         rt_key        = rt_key
-        create        = try(rt.create, lookup(tgw_config, "create_tgw", true))
+        create        = try(rt.create, try(tgw.create_tgw, true))
+        id            = try(rt.id, null)
         name          = try(rt.name, "${local.common_name}-tgw-rt-${rt_key}")
         tags          = try(rt.tags, {})
         propagations  = try(rt.propagations, [])
@@ -20,11 +15,12 @@ locals {
     }
   ]...)
 
-  route_tables_create = { for k, v in local.route_tables : k => v if v.create }
+  route_tables_create   = { for k, v in local.route_tables : k => v if v.create }
+  route_tables_existing = { for k, v in local.route_tables : k => v if !v.create }
 
   discovered_attachments = merge([
-    for tgw_key, tgw_config in var.tgw_parameters : {
-      for att_key, att in try(tgw_config.attachments, {}) :
+    for tgw_key, tgw in local.tgws : {
+      for att_key, att in try(tgw.attachments, {}) :
       "${tgw_key}/${att_key}" => {
         tgw_key       = tgw_key
         att_key       = att_key
@@ -43,8 +39,8 @@ locals {
   }
 
   vpc_attachment_ids = merge([
-    for tgw_key, tgw_config in var.tgw_parameters : {
-      for vpc_key, vpc in try(tgw_config.vpc_attachments, {}) :
+    for tgw_key, tgw in local.tgws : {
+      for vpc_key, vpc in try(tgw.vpc_attachments, {}) :
       "${tgw_key}/${vpc_key}" => module.wrapper_tgw[tgw_key].ec2_transit_gateway_vpc_attachment[vpc_key].id
     }
   ]...)
@@ -58,8 +54,8 @@ locals {
   attachment_ids = merge(local.discovered_attachment_ids, local.vpc_attachment_ids)
 
   vpc_associations = merge([
-    for tgw_key, tgw_config in var.tgw_parameters : {
-      for vpc_key, vpc in try(tgw_config.vpc_attachments, {}) :
+    for tgw_key, tgw in local.tgws : {
+      for vpc_key, vpc in try(tgw.vpc_attachments, {}) :
       "${tgw_key}/${vpc_key}" => {
         attachment  = "${tgw_key}/${vpc_key}"
         route_table = "${tgw_key}/${vpc.transit_gateway_route_table}"
@@ -98,9 +94,10 @@ locals {
     }
   ]...)
 
-  route_table_ids = {
-    for k, v in aws_ec2_transit_gateway_route_table.this : k => v.id
-  }
+  route_table_ids = merge(
+    { for k, v in aws_ec2_transit_gateway_route_table.this : k => v.id },
+    { for k, v in data.aws_ec2_transit_gateway_route_table.existing : k => v.id },
+  )
 }
 
 resource "aws_ec2_transit_gateway_route_table" "this" {

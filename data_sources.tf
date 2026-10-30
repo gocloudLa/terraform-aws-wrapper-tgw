@@ -4,16 +4,13 @@ data "aws_region" "current" {}
 /* Network | datasources                                                */
 /*----------------------------------------------------------------------*/
 data "aws_ec2_transit_gateway" "this" {
-  for_each = { for k, v in var.tgw_parameters : k => v if(try(v.create_tgw, true) != true) }
+  for_each = { for k, v in local.tgws : k => v if !try(v.create_tgw, true) }
 
   region = local.tgw_region[each.key]
 
   filter {
-    name = "options.amazon-side-asn"
-    values = try(
-      tolist(each.value.amazon_side_asn),
-      [tostring(lookup(each.value, "amazon_side_asn", "64512"))]
-    )
+    name   = "options.amazon-side-asn"
+    values = try(tolist(each.value.amazon_side_asn), [tostring(try(each.value.amazon_side_asn, "64512"))])
   }
 }
 
@@ -60,6 +57,27 @@ data "aws_ec2_transit_gateway_attachment" "discovered" {
     for_each = each.value.resource_id != null ? [each.value.resource_id] : []
     content {
       name   = "resource-id"
+      values = [filter.value]
+    }
+  }
+}
+
+# route_tables entries with create = false: an existing table on the same TGW, by id or Name tag.
+data "aws_ec2_transit_gateway_route_table" "existing" {
+  for_each = local.route_tables_existing
+
+  region = local.tgw_region[each.value.tgw_key]
+  id     = each.value.id
+
+  filter {
+    name   = "transit-gateway-id"
+    values = [local.tgw_ids[each.value.tgw_key]]
+  }
+
+  dynamic "filter" {
+    for_each = each.value.id == null ? [each.value.name] : []
+    content {
+      name   = "tag:Name"
       values = [filter.value]
     }
   }
