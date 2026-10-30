@@ -68,10 +68,13 @@ module "wrapper_tgw" {
 
       ## Managing TGW VPC Attachments
       vpc_attachments = {
-        "prod" = {                                                                                                             //must be the same vpc_name
-          subnet_ids                                      = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"] // Only 1 Subnet per AZ
-          dns_support                                     = true
-          ipv6_support                                    = false
+        "prod" = {                                                                          //must be the same vpc_name
+          subnet_ids   = ["private-us-east-1a", "private-us-east-1b", "private-us-east-1c"] // Only 1 Subnet per AZ
+          dns_support  = true
+          ipv6_support = false
+          # Only set these in the TGW owner account. On a shared TGW (create_tgw = false) AWS ignores them
+          # and the provider always reads true, so false shows a perpetual in-place diff. Omit them there;
+          # association/propagation is managed from the owner account (route_tables / attachments).
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
           transit_gateway_route_table                     = "shared"
