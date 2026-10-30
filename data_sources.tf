@@ -14,7 +14,9 @@ data "aws_ec2_transit_gateway" "this" {
   }
 }
 
-data "aws_ec2_transit_gateway_attachment" "discovered" {
+# Plural lookup: a missing attachment (e.g. the spoke stack was destroyed first) yields an empty
+# list instead of failing the read, so destroy still works. Plans fail via the preconditions instead.
+data "aws_ec2_transit_gateway_attachments" "discovered" {
   for_each = local.attachments_to_lookup
 
   region = local.tgw_region[each.value.tgw_key]

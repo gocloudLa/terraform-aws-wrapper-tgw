@@ -47,7 +47,9 @@ locals {
 
   discovered_attachment_ids = {
     for k, v in local.discovered_attachments : k => (
-      v.id != null ? v.id : data.aws_ec2_transit_gateway_attachment.discovered[k].id
+      v.id != null ? v.id : (
+        length(data.aws_ec2_transit_gateway_attachments.discovered[k].ids) == 1 ? data.aws_ec2_transit_gateway_attachments.discovered[k].ids[0] : null
+      )
     )
   }
 
@@ -118,6 +120,13 @@ resource "aws_ec2_transit_gateway_route_table_association" "this" {
   transit_gateway_attachment_id  = local.attachment_ids[each.value.attachment]
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
   replace_existing_association   = true
+
+  lifecycle {
+    precondition {
+      condition     = local.attachment_ids[each.value.attachment] != null
+      error_message = "TGW attachment ${each.value.attachment} not found, or its filters match more than one attachment. If the spoke stack was destroyed, remove it from attachments/route_tables."
+    }
+  }
 }
 
 resource "aws_ec2_transit_gateway_route_table_propagation" "this" {
@@ -126,6 +135,13 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "this" {
   region                         = local.tgw_region[split("/", each.value.route_table)[0]]
   transit_gateway_attachment_id  = local.attachment_ids[each.value.attachment]
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
+
+  lifecycle {
+    precondition {
+      condition     = local.attachment_ids[each.value.attachment] != null
+      error_message = "TGW attachment ${each.value.attachment} not found, or its filters match more than one attachment. If the spoke stack was destroyed, remove it from attachments/route_tables."
+    }
+  }
 }
 
 resource "aws_ec2_transit_gateway_route" "this" {
@@ -136,4 +152,11 @@ resource "aws_ec2_transit_gateway_route" "this" {
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
   transit_gateway_attachment_id  = each.value.blackhole ? null : local.attachment_ids[each.value.attachment]
   blackhole                      = each.value.blackhole
+
+  lifecycle {
+    precondition {
+      condition     = each.value.blackhole || try(local.attachment_ids[each.value.attachment], null) != null
+      error_message = "TGW attachment ${coalesce(each.value.attachment, "-")} not found, or its filters match more than one attachment. If the spoke stack was destroyed, remove it from attachments/route_tables."
+    }
+  }
 }
