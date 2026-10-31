@@ -55,6 +55,11 @@ locals {
 
   attachment_ids = merge(local.discovered_attachment_ids, local.vpc_attachment_ids)
 
+  # Resource arguments use a placeholder for attachments that were not found: destroy runs a normal
+  # refresh plan first (where preconditions are only warnings), and a null required argument fails it.
+  # A normal plan still stops on the preconditions below, so the placeholder never reaches AWS.
+  attachment_ids_or_placeholder = { for k, v in local.attachment_ids : k => coalesce(v, "tgw-attach-not-found") }
+
   vpc_associations = merge([
     for tgw_key, tgw in local.tgws : {
       for vpc_key, vpc in try(tgw.vpc_attachments, {}) :
@@ -117,7 +122,7 @@ resource "aws_ec2_transit_gateway_route_table_association" "this" {
   for_each = local.associations
 
   region                         = local.tgw_region[split("/", each.value.route_table)[0]]
-  transit_gateway_attachment_id  = local.attachment_ids[each.value.attachment]
+  transit_gateway_attachment_id  = local.attachment_ids_or_placeholder[each.value.attachment]
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
   replace_existing_association   = true
 
@@ -133,7 +138,7 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "this" {
   for_each = local.propagations
 
   region                         = local.tgw_region[split("/", each.value.route_table)[0]]
-  transit_gateway_attachment_id  = local.attachment_ids[each.value.attachment]
+  transit_gateway_attachment_id  = local.attachment_ids_or_placeholder[each.value.attachment]
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
 
   lifecycle {
@@ -150,7 +155,7 @@ resource "aws_ec2_transit_gateway_route" "this" {
   region                         = local.tgw_region[split("/", each.value.route_table)[0]]
   destination_cidr_block         = each.value.destination_cidr_block
   transit_gateway_route_table_id = local.route_table_ids[each.value.route_table]
-  transit_gateway_attachment_id  = each.value.blackhole ? null : local.attachment_ids[each.value.attachment]
+  transit_gateway_attachment_id  = each.value.blackhole ? null : local.attachment_ids_or_placeholder[each.value.attachment]
   blackhole                      = each.value.blackhole
 
   lifecycle {
