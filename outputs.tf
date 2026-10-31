@@ -13,12 +13,11 @@ output "route_table_ids" {
 }
 
 output "route_table_arns" {
-  description = "Named TGW route table ARNs, for tables created in this stack."
+  description = "Named TGW route table ARNs keyed by tgw then route table."
   value = {
     for tgw_key, tgw in local.tgws : tgw_key => {
       for rt_key, rt in try(tgw.route_tables, {}) :
-      rt_key => try(aws_ec2_transit_gateway_route_table.this["${tgw_key}/${rt_key}"].arn, null)
+      rt_key => try(aws_ec2_transit_gateway_route_table.this["${tgw_key}/${rt_key}"].arn, data.aws_ec2_transit_gateway_route_table.existing["${tgw_key}/${rt_key}"].arn, null)
     }
   }
 }
-
