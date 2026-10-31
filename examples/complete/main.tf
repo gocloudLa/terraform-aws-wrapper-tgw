@@ -10,7 +10,7 @@ module "wrapper_tgw" {
       # Variables to deploy transit gateway resource
 
       # create_tgw = true
-      create_tgw_routes = false # Default: true. Must be false with route_tables (nested extra table + tgw_routes)
+      create_tgw_routes = false # Default: true. Must be false with route_tables (otherwise the nested extra table is created)
 
       # description                            = "Transit Gateway 01"
       # amazon_side_asn                        = "64512"
@@ -29,7 +29,7 @@ module "wrapper_tgw" {
       ## Allow the sharing of the TGW using RAM
       share_tgw = true
       ## If enabled you can administer which accounts will have access to the TGW resources
-      ram_principals = ["123456789"]
+      ram_principals = ["123456789012"]
       # ram_allow_external_principals = false
       # ram_name                      = null
       enable_auto_accept_shared_attachments = true
