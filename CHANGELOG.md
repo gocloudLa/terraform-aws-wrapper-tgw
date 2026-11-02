@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/gocloudLa/terraform-aws-wrapper-tgw/compare/v0.1.0...v0.2.0) (2026-11-02)
+
+
+### Features
+
+* add named TGW route tables, RAM share, and attachment discovery ([#4](https://github.com/gocloudLa/terraform-aws-wrapper-tgw/issues/4)) ([b9b5833](https://github.com/gocloudLa/terraform-aws-wrapper-tgw/commit/b9b58334a93d18bcd1ca72e20d72993652e03cd7))
+
 ## 0.1.0 (2026-06-29)
 
 
